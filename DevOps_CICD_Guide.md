@@ -526,3 +526,8 @@ The first version of the workflow had an issue where the initial Trivy scan in t
 | **Missing Job:** No subsequent image scan. | **Added Job:** `trivy-scan-image` (Job 3). | Scanning the *code* (`fs`) doesn't catch issues in the **base image** (e.g., the underlying Debian OS). The new job runs a comprehensive **image scan** (`scan-type: 'image'`) to check for vulnerabilities and misconfigurations in the final package. |
 
 The pipeline now utilizes a true **DevSecOps** pattern by scanning the code, then the dependencies, and finally the built artifact (the Docker image) **before** deployment.
+
+---
+
+Use this command for temporary going to that container instead of exec -it
+docker run --rm -it 534232118663.dkr.ecr.ap-south-1.amazonaws.com/mydjango:latest sh

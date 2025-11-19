@@ -193,50 +193,56 @@ jobs:
 
 
 
-  # JOB 4: Deploy to EC2 (Only runs if both security checks and build pass)
-
+  # JOB 4: Deploy to EC2 (Uses Docker Compose for multi-container deployment)
   deploy:
-
     # Requires the image scan to pass before deployment begins
-
     needs: trivy-scan-image
-
     runs-on: ubuntu-latest
-
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        # We need the code here to access docker-compose.yml for copying
 
-      - name: Deploy to EC2 via SSH
-
-        uses: appleboy/ssh-action@v0.1.6
-
+      # 💡 STEP 1: Copy docker-compose.yml to EC2 host
+      - name: Copy deployment files to EC2
+        uses: appleboy/scp-action@v0.1.4
         with:
-
           host: ${{ secrets.EC2_HOST }}
-
           username: ${{ secrets.EC2_USER }}
-
           key: ${{ secrets.EC2_SSH_KEY }}
-
           port: 22
+          # Copy docker-compose.yml from the GitHub runner workspace
+          source: "docker-compose.yml" 
+          # Destination directory on EC2. Use a specific path.
+          target: "/home/${{ secrets.EC2_USER }}/django-app-deploy" # <<< Define a clean deployment path
 
+      # 💡 STEP 2: Execute deployment commands via SSH
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
           script: |
-            # Directory on EC2 where you store your code, especially docker-compose.yml
-            APP_DIR="/home/${{ secrets.EC2_USER }}/app" # <<< Set your application root path
+            # 1. Define the deployment directory on EC2 (must match the SCP target)
+            APP_DIR="/home/${{ secrets.EC2_USER }}/django-app-deploy"
+            
+            # Ensure the directory exists (optional, but safer)
+            mkdir -p $APP_DIR
 
-            # 1. Login to ECR
+            # 2. Login to ECR
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR_REPO_URI }}
 
-            # 2. Navigate to the application directory
-            # This is critical for 'docker compose' to find docker-compose.yml
+            # 3. Navigate to the deployment directory containing the docker-compose.yml
             cd $APP_DIR
 
-            # 3. Pull the latest images for the stack (App from ECR, DB from Docker Hub/Registry)
+            # 4. Pull the latest images for the stack (App from ECR, DB from Docker Hub/Registry)
+            # This ensures we get the latest built app image.
             docker compose pull
             
-            # 4. Gracefully stop and remove the old stack (if running)
+            # 5. Gracefully stop and remove the old stack (if running)
             docker compose down || true
 
-            # 5. Start the new stack in detached mode
-            # This creates the internal network, allowing the Django service 
-            # to resolve the database hostname (e.g., 'db').
+            # 6. Start the new stack in detached mode
             docker compose up -d

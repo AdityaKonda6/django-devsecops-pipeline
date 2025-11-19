@@ -56,7 +56,8 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          mask-password: true # Mask password for security
+          # FIX: Masks the Docker password in the logs
+          mask-password: true
 
       - name: Build, tag, and push image to Amazon ECR
         env:
@@ -84,7 +85,8 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          mask-password: true # Mask password for security
+          # FIX: Masks the Docker password in the logs
+          mask-password: true
 
       - name: Run Trivy Image Scan (Container OS and Packages)
         uses: aquasecurity/trivy-action@master
@@ -100,9 +102,13 @@ jobs:
 ---
   # JOB 4: Deploy to EC2 (Uses Docker Compose for multi-container deployment)
   deploy:
+    # Requires the image scan to pass before deployment begins
     needs: trivy-scan-image
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code for docker-compose.yml
+        uses: actions/checkout@v3
+        
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v0.1.6
         with:
@@ -110,22 +116,26 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
-          # Ensure you update the 'cd' path below to your actual application root on EC2
+          # NOTE: The root user is used here, but in a production setup, 
+          # consider ensuring the non-root user has docker permissions.
           script: |
-            # 1. Navigate to the application root directory on the EC2 machine
-            # This directory MUST contain the docker-compose.yml file.
-            cd /home/${{ secrets.EC2_USER }}/your-app-root # <<< CHANGE THIS PATH
+            # Directory on EC2 where you store your code, especially docker-compose.yml
+            APP_DIR="/home/${{ secrets.EC2_USER }}/django-app" # <<< Set your application root path
 
-            # 2. Login to ECR (using the IAM Role attached to EC2)
+            # 1. Login to ECR
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR_REPO_URI }}
 
-            # 3. Pull the latest application image and start the entire stack (web + db)
-            # 'docker compose pull' fetches all images (app and postgres)
+            # 2. Navigate to the application directory
+            # This is critical for 'docker compose' to find docker-compose.yml
+            cd $APP_DIR
+
+            # 3. Pull the latest images for the stack (App from ECR, DB from Docker Hub/Registry)
             docker compose pull
             
-            # 4. Stop and remove the old stack (graceful shutdown)
+            # 4. Gracefully stop and remove the old stack (if running)
             docker compose down || true
-            
-            # 5. Run the new stack in detached mode
-            # This ensures both the DB and the Django app are on the same network
+
+            # 5. Start the new stack in detached mode
+            # This creates the internal network, allowing the Django service 
+            # to resolve the database hostname (e.g., 'db').
             docker compose up -d

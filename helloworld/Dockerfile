@@ -36,6 +36,11 @@ RUN python manage.py collectstatic --noinput || true
 # Entrypoint setup
 COPY ./entrypoint.sh /app/entrypoint.sh
 
+# 🔑 FINAL FIX: Convert Windows (CRLF) line endings to Linux (LF)
+RUN apk add --no-cache dos2unix
+RUN dos2unix /app/entrypoint.sh
+RUN apk del dos2unix
+
 # 🔑 FIX: Run chmod as root user (before switching the user context)
 RUN chmod +x /app/entrypoint.sh
 

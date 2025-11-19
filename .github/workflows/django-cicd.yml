@@ -62,7 +62,8 @@ jobs:
           IMAGE_TAG: latest
         run: |
           # We use the repository URI directly from secrets to avoid mismatch
-          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG ./helloworld
+          # docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REPOSITORY:$IMAGE_TAG
 
   # JOB 3: Deploy to EC2 (Only runs if Build & Push passes)

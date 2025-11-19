@@ -235,12 +235,10 @@ jobs:
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR_REPO_URI }}
 
             # 3. Navigate to the deployment directory containing the docker-compose.yml
-            cd $APP_DIR
-            ls -l $APP_DIR 
-            cat $APP_DIR/docker-compose.yml
+            # 🎯 FIX: Navigate INTO the nested 'helloworld' directory where the file landed
+            cd $APP_DIR/helloworld 
 
             # 4. Pull the latest images for the stack (App from ECR, DB from Docker Hub/Registry)
-            # This ensures we get the latest built app image.
             docker compose pull
             
             # 5. Gracefully stop and remove the old stack (if running)

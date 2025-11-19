@@ -34,7 +34,7 @@ ENV DJANGO_SETTINGS_MODULE=helloworld.settings
 RUN python manage.py collectstatic --noinput || true
 
 # Entrypoint setup
-# COPY ./entrypoint.sh /app/entrypoint.sh
+COPY ./entrypoint.sh /app/entrypoint.sh
 
 # 🔑 FINAL FIX: Convert Windows (CRLF) line endings to Linux (LF)
 RUN apk add --no-cache dos2unix
@@ -42,7 +42,7 @@ RUN dos2unix /app/entrypoint.sh
 RUN apk del dos2unix
 
 # 🔑 FIX: Run chmod as root user (before switching the user context)
-# RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 # 1. Create a non-root group explicitly
 RUN addgroup -S django_user
@@ -62,4 +62,4 @@ USER django_user
 EXPOSE 8000
 
 # Default command
-CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn helloworld.wsgi:application --bind 0.0.0.0:8000"]
+CMD ["/app/entrypoint.sh"]

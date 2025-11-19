@@ -36,7 +36,7 @@ RUN python manage.py collectstatic --noinput || true
 # --- Security and Run Commands ---
 
 # 1. Create a non-root user (Fixes Trivy Misconfig issue)
-RUN adduser --system --group django_user
+RUN adduser -S -D -G django_user django_user
 
 # 2. Switch to the non-root user
 USER django_user

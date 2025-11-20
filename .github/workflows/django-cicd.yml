@@ -101,7 +101,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           # Copy docker-compose.yml from the GitHub runner workspace
-          source: "helloworld/docker-compose.yml"
+          source: "helloworld/docker-compose.yml,helloworld/nginx"
           # Destination directory on EC2. Use a specific path.
           target: "/home/${{ secrets.EC2_USER }}/django-app-deploy" # <<< Define a clean deployment path
       # 💡 STEP 2: Execute deployment commands via SSH

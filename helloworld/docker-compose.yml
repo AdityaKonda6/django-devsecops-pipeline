@@ -35,8 +35,8 @@ services:
     # volumes:
     #   - .:/app # Removed volume mapping, as we don't want local code sync in CD
 
-    ports:
-      - "8000:8000"
+    # ports:
+    #   - "8000:8000"
       
     environment:
       # These environment variables must be used in your Django settings.py file
@@ -53,6 +53,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+# 💡 NEW SERVICE: Nginx Reverse Proxy
+  nginx:
+    image: nginx:stable-alpine
+    restart: always
+    ports:
+      # Expose port 80 (HTTP) to the host EC2 machine
+      - "80:80"
+    volumes:
+      # Mount the configuration file from your local 'nginx' folder
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - web # Nginx starts only after the web app is running
 
 volumes:
   postgres_data:

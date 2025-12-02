@@ -381,7 +381,23 @@ volumes:
   prometheus_data:
   grafana_data:
 ```
+---
 
+./prometheus/alerts.yml
+
+```yaml
+groups:
+  - name: instance-down
+    rules:
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.job }} ({{ $labels.instance }}) is down"
+          description: "Prometheus target {{ $labels.job }} ({{ $labels.instance }}) has been down for more than 1 minute."
+```
 ---
 
 # 🚀 **11. Start Everything**
